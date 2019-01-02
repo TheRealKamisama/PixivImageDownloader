@@ -49,7 +49,7 @@ namespace TRKS.github.ImageDownloader
                         var uid = Console.ReadLine();
                         var favoritework = api.GetFavoriteWork(uid, count);
                         var urls = new List<string>();
-                        Console.WriteLine($"已获取收藏作品,数量{favoritework.illusts.Length}");
+                        Console.WriteLine($"已获取收藏作品,数量{favoritework.illusts.Count}");
                         foreach (var illust in favoritework.illusts)
                         {
                             if (illust.meta_pages.Length == 0)

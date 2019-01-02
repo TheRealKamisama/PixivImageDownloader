@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -31,17 +32,20 @@ namespace TRKS.github.ImageDownloader
         private WebClient CreateApiWebClient()
         {
             var webClient = new WebClient();
-            webClient.Headers.Add("Host", "public-api.secure.pixiv.net");
-            webClient.Headers.Add("Referer", "http://spapi.pixiv.net/");
+            //webClient.Headers.Add("Host", "public-api.secure.pixiv.net");
+            //webClient.Headers.Add("Referer", "http://spapi.pixiv.net/");
             webClient.Headers.Add("Authorization", $"Bearer {accessToken}");
-            webClient.Headers.Add("Accept-Encoding", "gzip, deflate");
-            webClient.Headers.Add("Accept", "*/*");
-            webClient.Headers.Add("Accept-Language", "zh-cn");
+            //webClient.Headers.Add("Accept-Encoding", "gzip, deflate");
+            //webClient.Headers.Add("Accept", "*/*");
+            //webClient.Headers.Add("Accept-Language", "zh-cn");
+            webClient.Headers.Add("App-OS-Version", "9.0.2");
+            webClient.Headers.Add("App-OS", "ios");
+            webClient.Headers.Add("App-Version", "6.0.4");
             // webClient.Headers.Add("Proxy-Connection", "keep-alive");
             // webClient.Headers.Add("Connection", "keep-alive");
             webClient.Headers.Add("User-Agent", "PixivIOSApp/6.0.4 (iOS 9.0.2; iPhone6,1)");
             webClient.Proxy = WebRequest.GetSystemWebProxy();
-            webClient.Encoding = Encoding.ASCII;
+            webClient.Encoding = Encoding.Default;
 
             return webClient;
         }
@@ -55,18 +59,20 @@ namespace TRKS.github.ImageDownloader
         public FavoriteWork GetFavoriteWork(string uid, int count)
         {
             var url =
-                $"https://app-api.pixiv.net/v1/user/bookmarks/illust?user_id={uid}&restrict=public&filter=for_ios";
+                $"https://app-api.pixiv.net/v1/user/bookmarks/illust?user_id={uid}&restrict=public";
             var result = new FavoriteWork();
             var webClient = CreateApiWebClient();
             while (true)
             {
                 var one_result = webClient.DownloadString(url).JsonDeserialize<FavoriteWork>();
                 url = one_result.next_url;
-                result.illusts.Concat(one_result.illusts);
+                result.illusts = result.illusts.Concat(one_result.illusts).ToArray();
                 if (result.illusts.Length >= count)
                 {
                     result.illusts = result.illusts.Take(count).ToArray();
+                    break;
                 }
+                Thread.Sleep(100);
                 if (url is null)
                 {
                     break;

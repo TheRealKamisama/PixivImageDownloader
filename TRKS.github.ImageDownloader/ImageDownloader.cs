@@ -16,6 +16,7 @@ namespace TRKS.github.ImageDownloader
             {
                 var strs = url.Split('/');
                 WebHelper.DowloadFile(url, path, strs.Last());
+                Thread.Sleep(500);
             }
         }
         static void Main()
@@ -51,6 +52,10 @@ namespace TRKS.github.ImageDownloader
                         Console.WriteLine($"已获取收藏作品,数量{favoritework.illusts.Length}");
                         foreach (var illust in favoritework.illusts)
                         {
+                            if (illust.meta_pages.Length == 0)
+                            {
+                                urls.Add(illust.meta_single_page.original_image_url);
+                            }
                             foreach (var metaPage in illust.meta_pages)
                             {
                                 urls.Add(metaPage.image_urls.original);
@@ -60,6 +65,7 @@ namespace TRKS.github.ImageDownloader
                         Console.WriteLine($"正在下载");
                         DownloadPictures(urls, $"{uid}_图片收藏");
                         Console.WriteLine($"下载完毕.");
+            Console.ReadKey();
                         return;
                     case "3":
                         // 下载搜素

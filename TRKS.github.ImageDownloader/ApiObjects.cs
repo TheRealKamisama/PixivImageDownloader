@@ -14,7 +14,7 @@ namespace TRKS.github.ImageDownloader
     }
     public class FavoriteWork
     {
-        public Illust[] illusts { get; set; } = new Illust[0];
+        public List<Illust> illusts { get; set; } = new List<Illust>();
         public string next_url { get; set; }
     }
 

@@ -72,7 +72,6 @@ namespace TRKS.github.ImageDownloader
                     result.illusts = result.illusts.Take(count).ToArray();
                     break;
                 }
-                Thread.Sleep(100);
                 if (url is null)
                 {
                     break;

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Runtime.CompilerServices;
 using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading;
@@ -10,14 +12,24 @@ namespace TRKS.github.ImageDownloader
 {
     public class ImageDownloader
     {
+        private static volatile int count = 1;
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public static void DownloadPictures(List<string> urls, string path)
         {
-            foreach (var url in urls)
-            {
-                var strs = url.Split('/');
-                WebHelper.DowloadFile(url, path, strs.Last());
-                Thread.Sleep(500);
-            }
+            ServicePointManager.DefaultConnectionLimit = 10000;
+
+            Parallel.ForEach(
+                urls,
+                new ParallelOptions {MaxDegreeOfParallelism = 20}, url =>
+                {
+                    var strs = url.Split('/');
+                    var current = count;
+                    count++;
+                    Console.WriteLine($"第{current}/{urls.Count}个文件的下载开始.");
+                    WebHelper.DowloadFile(url, path, strs.Last());
+                    Console.WriteLine($"第{current}/{urls.Count}个文件的下载结束.");
+                });
         }
         static void Main()
         {

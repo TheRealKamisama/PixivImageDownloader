@@ -66,10 +66,10 @@ namespace TRKS.github.ImageDownloader
             {
                 var one_result = webClient.DownloadString(url).JsonDeserialize<FavoriteWork>();
                 url = one_result.next_url;
-                result.illusts = result.illusts.Concat(one_result.illusts).ToArray();
-                if (result.illusts.Length >= count)
+                result.illusts.AddRange(one_result.illusts);
+                if (result.illusts.Count >= count)
                 {
-                    result.illusts = result.illusts.Take(count).ToArray();
+                    result.illusts = result.illusts.Take(count).ToList();
                     break;
                 }
                 if (url is null)

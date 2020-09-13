@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
@@ -7,6 +8,7 @@ using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using GammaLibrary.Extensions;
 
 namespace TRKS.github.ImageDownloader
 {
@@ -34,10 +36,15 @@ namespace TRKS.github.ImageDownloader
         static void Main()
         {
             {
-                Console.WriteLine("请输入邮箱.");
-                var user = Console.ReadLine();
-                Console.WriteLine("请输入密码.");
-                var password = Console.ReadLine();
+                var user = "";
+                var password = "";
+                if (Config.UserData.Instance.RefreshToken.IsNullOrEmpty())
+                {
+                    Console.WriteLine("请输入邮箱.");
+                    user = Console.ReadLine();
+                    Console.WriteLine("请输入密码.");
+                    password = Console.ReadLine();
+                }
                 var api = new PixivApi(user, password);
                 Console.WriteLine(@"下载此用户的作品请输入1, 要下载收藏夹请输入2, 下载搜索请输入3.");
                 var mode = Console.ReadLine();
@@ -60,10 +67,12 @@ namespace TRKS.github.ImageDownloader
                         var page = 1;
                         var uid = Console.ReadLine();
                         var favoritework = api.GetFavoriteWork(uid, count);
+                        var ids = new List<int>();
                         var urls = new List<string>();
                         Console.WriteLine($"已获取收藏作品,数量{favoritework.illusts.Count}");
                         foreach (var illust in favoritework.illusts)
                         {
+                            ids.Add(illust.id);
                             if (illust.meta_pages.Length == 0)
                             {
                                 urls.Add(illust.meta_single_page.original_image_url);
@@ -73,7 +82,11 @@ namespace TRKS.github.ImageDownloader
                                 urls.Add(metaPage.image_urls.original);
                             }
                         }
+
+                        urls.RemoveAll(url => url.Contains("limit"));
                         Console.WriteLine($"已经获取所有图片链接,总计{urls.Count}个文件");
+                        File.WriteAllText(Path.Combine($"{uid}_图片收藏", "ids.txt"), ids.Connect(", "));
+                        Console.WriteLine($"已经将所有画集ID保存为ids.txt");
                         Console.WriteLine($"正在下载");
                         DownloadPictures(urls, $"{uid}_图片收藏");
                         Console.WriteLine($"下载完毕.");

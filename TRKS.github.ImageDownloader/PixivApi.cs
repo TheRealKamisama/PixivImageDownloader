@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using GammaLibrary.Extensions;
 using Newtonsoft.Json;
 
 namespace TRKS.github.ImageDownloader
@@ -13,10 +15,11 @@ namespace TRKS.github.ImageDownloader
     public class PixivApi
     {
         private string accessToken;
-
+        private const string ClientHash = "28c1fdd170a5204386cb1313c7077b34f83e4aaf4aa829ce78c231e05b0bae2c";
+        private static string UtcTimeNow => DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss+00:00");
         public PixivApi(string userName, string password)
         {
-            accessToken = GetAccessToken(userName, password).access_token;
+            accessToken = GetAccessToken(userName, password);
         }
 
         private WebClient CreateDefaultWebClient()
@@ -81,17 +84,31 @@ namespace TRKS.github.ImageDownloader
             return result;
         }
 
-        private Response GetAccessToken(string userName, string password)
+        private string GetAccessToken(string userName, string password)
         {
+            if (!(Config.UserData.Instance.ExpireDate <= DateTime.Now))
+            {
+                return Config.UserData.Instance.AccessToken;
+            }
+            var time = UtcTimeNow;
+            var hash = (time + ClientHash).Hash<MD5CryptoServiceProvider>();
             const string url = "https://oauth.secure.pixiv.net/auth/token";
-            var postData = $"username={userName}&password={password}&grant_type=password&client_id=bYGKuGVw91e0NMfPGp44euvGt59s&client_secret=HP3RmkgAmEGro0gn1x9ioawQE8WMfvLXDz3ZqxpK";
-            /* 
-                postData = "get_secure_url=1&grant_type=refresh_token&client_id=bYGKuGVw91e0NMfPGp44euvGt59s&client_secret=HP3RmkgAmEGro0gn1x9ioawQE8WMfvLXDz3ZqxpK&refresh_id=" + refresh_token;
-            */
+            var postData = "get_secure_url=1&grant_type=refresh_token&client_id=bYGKuGVw91e0NMfPGp44euvGt59s&client_secret=HP3RmkgAmEGro0gn1x9ioawQE8WMfvLXDz3ZqxpK&refresh_id=" + Config.UserData.Instance.RefreshToken;
+            if (Config.UserData.Instance.RefreshToken.IsNullOrEmpty())
+            {
+                postData = $"username={userName}&password={password}&grant_type=password&client_id=MOBrBDS8blbauoSck0ZfDbtuzpyT&client_secret=lsACyCD94FhDUtGTXi3QzcFE2uU1hqtDaKeqrdwj";
+            }
+
             var webClient = CreateDefaultWebClient();
+            webClient.Headers.Add("X-Client-Time", time);
+            webClient.Headers.Add("X-Client-Hash", hash);
             var result_string = webClient.UploadString(url, postData);
             var result = result_string.JsonDeserialize<OAuthResult>();
-            return result.Response;
+            Config.UserData.Instance.RefreshToken = result.Response.refresh_token;
+            Config.UserData.Instance.AccessToken = result.Response.access_token;
+            Config.UserData.Instance.ExpireDate = DateTime.Now + TimeSpan.FromSeconds(result.Response.expires_in);
+            Config.UserData.Save();
+            return result.Response.access_token;
         }
 
         private class OAuthResult
@@ -131,5 +148,22 @@ namespace TRKS.github.ImageDownloader
 
 
 
+    }
+
+    public static class Strings
+    {
+        public static string Hash<T>(this string str) where T : HashAlgorithm, new()
+        {
+            using (var crypt = new T())
+            {
+                var hashBytes = crypt.ComputeHash(str.GetBytes());
+                return hashBytes.Select(b => b.ToString("x2")).Aggregate((s1, s2) => s1 + s2);
+            }
+        }
+
+        public static byte[] GetBytes(this string str, Encoding encoding = null)
+        {
+            return encoding == null ? Encoding.UTF8.GetBytes(str) : encoding.GetBytes(str);
+        }
     }
 }
